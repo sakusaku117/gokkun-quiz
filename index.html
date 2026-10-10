@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>ごっくんクイズ</title>
+<style>
+:root{--bg:#f2faf7;--card:#fff;--ink:#1d2b33;--sub:#52666f;--main:#0f8a7a;--main-dark:#0a6558;--line:#cfe3dd;--good:#12805c;--good-bg:#e2f6ec;--bad:#c23b4a;--bad-bg:#fdeaec;--accent:#ffb52e}
+*{box-sizing:border-box;margin:0;padding:0}
+html{-webkit-text-size-adjust:100%}
+body{min-height:100vh;min-height:100dvh;background:var(--bg);color:var(--ink);font-family:"Hiragino Maru Gothic ProN","Hiragino Sans","Yu Gothic","Meiryo",sans-serif;font-size:18px;line-height:2;-webkit-tap-highlight-color:transparent}
+#app{max-width:560px;margin:0 auto;padding:16px 16px 40px}
+rt{font-size:.5em;color:var(--sub);font-weight:normal}
+body.no-ruby rt{display:none}
+.screen{display:none}
+.screen.show{display:block}
+.card{background:var(--card);border:2px solid var(--line);border-radius:20px;padding:20px 18px;box-shadow:0 4px 14px rgba(15,138,122,.08)}
+.btn{display:block;width:100%;min-height:64px;padding:10px 16px;border:none;border-radius:18px;background:var(--main);color:#fff;font:inherit;font-size:22px;font-weight:bold;cursor:pointer;box-shadow:0 4px 0 var(--main-dark)}
+.btn:active{transform:translateY(3px);box-shadow:0 1px 0 var(--main-dark)}
+.btn rt{color:#d9f3ee}
+.btn.ghost{background:#fff;color:var(--main-dark);border:2px solid var(--main);box-shadow:none;font-size:18px;min-height:52px}
+.btn.ghost rt{color:var(--sub)}
+
+/* スタート */
+#start{text-align:center}
+#start .mark{font-size:72px;line-height:1.2;margin-top:8px}
+#start h1{font-size:36px;line-height:1.4;color:var(--main-dark)}
+#start .lead{font-size:20px;margin:4px 0 16px}
+#start ul{list-style:none;text-align:left;margin-bottom:18px}
+#start li{padding-left:1.6em;text-indent:-1.6em}
+.toggle{margin-top:14px}
+.note{font-size:14px;line-height:1.8;color:var(--sub);margin-top:18px}
+
+/* クイズ */
+#bar{display:flex;align-items:center;gap:10px;margin-bottom:12px;font-weight:bold;line-height:1.4}
+#count{white-space:nowrap;font-size:20px;color:var(--main-dark)}
+#track{flex:1;height:14px;background:#dcebe6;border-radius:7px;overflow:hidden}
+#fill{height:100%;width:0;background:var(--accent);border-radius:7px;transition:width .3s}
+#score{white-space:nowrap;font-size:16px;color:var(--sub)}
+#cat{display:inline-block;padding:0 14px;border-radius:14px;background:#d8f0ea;color:var(--main-dark);font-size:15px;font-weight:bold}
+#qtext{font-size:24px;font-weight:bold;line-height:2;margin:6px 0 14px}
+#choices{display:flex;flex-direction:column;gap:12px}
+.choice{display:flex;align-items:center;gap:12px;width:100%;min-height:68px;padding:8px 16px;border:3px solid var(--line);border-radius:18px;background:#fff;color:var(--ink);font:inherit;font-size:21px;font-weight:bold;text-align:left;cursor:pointer}
+.choice .tag{flex:none;width:36px;height:36px;border-radius:50%;background:#e6f2ef;color:var(--main-dark);font-size:18px;line-height:36px;text-align:center}
+.choice:disabled{cursor:default;color:var(--sub)}
+.choice.correct{border-color:var(--good);background:var(--good-bg);color:var(--ink)}
+.choice.correct .tag{background:var(--good);color:#fff}
+.choice.wrong{border-color:var(--bad);background:var(--bad-bg);color:var(--ink)}
+.choice.wrong .tag{background:var(--bad);color:#fff}
+#fb{display:none;margin-top:16px}
+#fb.show{display:block}
+#judge{font-size:26px;font-weight:bold;line-height:1.6}
+#judge.ok{color:var(--good)}
+#judge.ng{color:var(--bad)}
+#explain{margin:6px 0 16px}
+
+/* けっか */
+#result{text-align:center}
+#result h2{font-size:22px;color:var(--sub)}
+#points{font-size:64px;font-weight:bold;line-height:1.3;color:var(--main-dark)}
+#points small{font-size:26px}
+#rank{font-size:28px;font-weight:bold;line-height:1.6}
+#msg{margin:6px 0 16px}
+#review{text-align:left;margin:18px 0}
+#review h3{font-size:19px;color:var(--main-dark)}
+#review li{margin:8px 0 8px 1.4em;line-height:1.9}
+#review .ans{font-weight:bold;color:var(--good)}
+.advice{text-align:left;background:#fff8e6;border:2px solid #f3d999;border-radius:16px;padding:12px 16px;margin:18px 0;font-size:16px;line-height:1.9}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <section id="start" class="screen show">
+    <div class="card">
+      <div class="mark" aria-hidden="true">🥄</div>
+      <h1>ごっくんクイズ</h1>
+      <p class="lead" data-r="〜{飲|の}み{込|こ}みのひみつ〜"></p>
+      <ul>
+        <li data-r="✏️ ぜんぶで 20{問|もん}。3つの{中|なか}から えらんでね"></li>
+        <li data-r="💡 こたえるたびに {解説|かいせつ}が {出|で}ます"></li>
+        <li data-r="🏅 さいごに {点数|てんすう}が わかります"></li>
+      </ul>
+      <button class="btn" id="btnStart">スタート</button>
+      <button class="btn ghost toggle" id="btnRuby">ふりがな:あり</button>
+      <p class="note">このクイズは名前などの入力がいりません。<br>こたえた内容はどこにも送信・保存されません。</p>
+    </div>
+  </section>
+
+  <section id="quiz" class="screen">
+    <div id="bar">
+      <span id="count"></span>
+      <div id="track"><div id="fill"></div></div>
+      <span id="score"></span>
+    </div>
+    <div class="card">
+      <span id="cat"></span>
+      <p id="qtext"></p>
+      <div id="choices"></div>
+      <div id="fb">
+        <p id="judge"></p>
+        <p id="explain"></p>
+        <button class="btn" id="btnNext"></button>
+      </div>
+    </div>
+  </section>
+
+  <section id="result" class="screen">
+    <div class="card">
+      <h2>けっか</h2>
+      <p id="points"></p>
+      <p id="rank"></p>
+      <p id="msg"></p>
+      <div id="review"></div>
+      <p class="advice" data-r="🍵 {食事|しょくじ}で よく むせる、{飲|の}み{込|こ}みにくい など {気|き}になることが あるときは、{医師|いし}や {言語聴覚士|げんごちょうかくし}に {相談|そうだん}してください。このクイズは {病気|びょうき}の {診断|しんだん}を するものでは ありません。"></p>
+      <button class="btn" id="btnRetry">もういちど</button>
+    </div>
+  </section>
+
+</div>
+
+<script>
+// {漢字|よみ} と書いたところが ふりがな付きになる
+const QUESTIONS=[
+ {cat:'からだのしくみ',
+  q:'{食|た}べ{物|もの}や {飲|の}み{物|もの}を {飲|の}み{込|こ}むことを {何|なん}という?',
+  c:['{嚥下|えんげ}','{咀嚼|そしゃく}','{消化|しょうか}'],
+  e:'{口|くち}から {胃|い}へ {送|おく}りこむことを「{嚥下|えんげ}」といいます。{咀嚼|そしゃく}は かむこと、{消化|しょうか}は {食|た}べ{物|もの}を {体|からだ}に {取|と}り{入|い}れやすく {分解|ぶんかい}することです。'},
+ {cat:'からだのしくみ',
+  q:'{飲|の}み{込|こ}んだ {食|た}べ{物|もの}が {通|とお}る {管|くだ}は どれ?',
+  c:['{食道|しょくどう}','{気管|きかん}','{血管|けっかん}'],
+  e:'のどの {奥|おく}は、{空気|くうき}が {通|とお}る「{気管|きかん}」と {食|た}べ{物|もの}が {通|とお}る「{食道|しょくどう}」に {分|わ}かれています。{食|た}べ{物|もの}は {食道|しょくどう}を {通|とお}って {胃|い}へ {行|い}きます。'},
+ {cat:'からだのしくみ',
+  q:'ごっくんと {飲|の}み{込|こ}む {瞬間|しゅんかん}、{息|いき}は どうなっている?',
+  c:['{止|と}まっている','{吸|す}っている','{吐|は}いている'],
+  e:'{飲|の}み{込|こ}む {瞬間|しゅんかん}は、{気管|きかん}を {守|まも}るために {息|いき}が {自然|しぜん}に {止|と}まります。{食|た}べながら しゃべると むせやすいのは このためです。'},
+ {cat:'からだのしくみ',
+  q:'{飲|の}み{込|こ}むとき、{気管|きかん}の {入口|いりぐち}に ふたをするのは?',
+  c:['{喉頭蓋|こうとうがい}','{口蓋垂|こうがいすい}(のどちんこ)','{扁桃|へんとう}'],
+  e:'{飲|の}み{込|こ}む {瞬間|しゅんかん}に「{喉頭蓋|こうとうがい}」が たおれて {気管|きかん}の {入口|いりぐち}に ふたをし、{食|た}べ{物|もの}が {入|はい}らないように {守|まも}ります。'},
+ {cat:'からだのしくみ',
+  q:'{飲|の}み{込|こ}むとき、「のどぼとけ」は どう {動|うご}く?',
+  c:['{上|うえ}に {上|あ}がる','{下|した}に {下|さ}がる','{動|うご}かない'],
+  e:'のどに {手|て}を {当|あ}てて つばを {飲|の}んでみましょう。のどぼとけが {上|うえ}に {動|うご}きます。この {動|うご}きで {食道|しょくどう}の {入口|いりぐち}が {開|ひら}きます。'},
+ {cat:'からだのしくみ',
+  q:'{人|ひと}は {1日|いちにち}に {何回|なんかい}くらい {飲|の}み{込|こ}んでいる?',
+  c:['{約|やく}600{回|かい}','{約|やく}60{回|かい}','{約|やく}6000{回|かい}'],
+  e:'{人|ひと}によって {差|さ}は ありますが、{1日|いちにち}に {約|やく}600{回|かい}と いわれています。{寝|ね}ている {間|あいだ}も つばを {飲|の}み{込|こ}んでいます。'},
+ {cat:'からだのしくみ',
+  q:'つば({唾液|だえき})は {1日|いちにち}に どれくらい {出|で}る?',
+  c:['{約|やく}1〜1.5リットル','{約|やく}100ミリリットル','{約|やく}5リットル'],
+  e:'{大|おお}きな ペットボトル {約|やく}1{本分|ぽんぶん}も {出|で}ています。{唾液|だえき}は {口|くち}の {中|なか}を きれいにし、{食|た}べ{物|もの}を {飲|の}み{込|こ}みやすくします。'},
+ {cat:'からだのしくみ',
+  q:'よく かむと、{食|た}べ{物|もの}は どうなる?',
+  c:['{飲|の}み{込|こ}みやすく まとまる','{温度|おんど}が {下|さ}がりやすくなる','{胃|い}で {溶|と}けにくくなる'],
+  e:'よく かむと {食|た}べ{物|もの}が {細|こま}かくなり、{唾液|だえき}と まざって やわらかい まとまりに なります。これで {安全|あんぜん}に {飲|の}み{込|こ}めます。'},
+
+ {cat:'ごえんと むせ',
+  q:'{食|た}べ{物|もの}が まちがって {気管|きかん}に {入|はい}ることを {何|なん}という?',
+  c:['{誤嚥|ごえん}','{誤飲|ごいん}','{嘔吐|おうと}'],
+  e:'{気管|きかん}に {入|はい}ってしまうことを「{誤嚥|ごえん}」といいます。「{誤飲|ごいん}」は {電池|でんち}や おもちゃなど、{食|た}べ{物|もの}でないものを {飲|の}み{込|こ}むことです。'},
+ {cat:'ごえんと むせ',
+  q:'「むせる」のは {何|なん}のため?',
+  c:['{気管|きかん}に {入|はい}ったものを {出|だ}すため','のどの {渇|かわ}きを {知|し}らせるため','{胃|い}の {空気|くうき}を {外|そと}に {出|だ}すため'],
+  e:'むせは、{気管|きかん}に {入|はい}りかけたものを せきで {外|そと}に {出|だ}す、{体|からだ}を {守|まも}る {反応|はんのう}です。ただし、むせずに {誤嚥|ごえん}していることも あります。'},
+ {cat:'ごえんと むせ',
+  q:'{誤嚥|ごえん}が きっかけで {起|お}こる {病気|びょうき}は?',
+  c:['{誤嚥性肺炎|ごえんせいはいえん}','{逆流性食道炎|ぎゃくりゅうせいしょくどうえん}','{急性胃腸炎|きゅうせいいちょうえん}'],
+  e:'{食|た}べ{物|もの}や {唾液|だえき}と いっしょに {細菌|さいきん}が {肺|はい}に {入|はい}って {起|お}こる {肺炎|はいえん}です。{高齢|こうれい}の {方|かた}に {多|おお}い {病気|びょうき}です。'},
+ {cat:'ごえんと むせ',
+  q:'{誤嚥性肺炎|ごえんせいはいえん}を {防|ふせ}ぐために {大切|たいせつ}なのは?',
+  c:['{口|くち}の {中|なか}を きれいにする','{食後|しょくご} すぐに {横|よこ}になる','{水分|すいぶん}を ひかえめにする'],
+  e:'{歯|は}みがきなどで {口|くち}の {中|なか}の {細菌|さいきん}を へらすことが {予防|よぼう}に なります。{食後|しょくご} すぐ {横|よこ}になると {逆流|ぎゃくりゅう}しやすく、{水分|すいぶん}{不足|ぶそく}も {体|からだ}に よくありません。'},
+ {cat:'ごえんと むせ',
+  q:'{飲|の}み{込|こ}む {力|ちから}が {弱|よわ}くなってきた サインは?',
+  c:['{食事中|しょくじちゅう}に よく むせる','{食事中|しょくじちゅう}に あくびが {出|で}る','{食後|しょくご}に しゃっくりが {出|で}る'],
+  e:'よく むせる ほかに、{食後|しょくご}に {声|こえ}が ガラガラする、{食事|しょくじ}に {時間|じかん}が かかる、やせてきた なども サインです。'},
+
+ {cat:'食べかたの くふう',
+  q:'{次|つぎ}のうち、{飲|の}み{込|こ}みにくい {食|た}べ{物|もの}は?',
+  c:['{食|しょく}パン','プリン','ヨーグルト'],
+  e:'パンは パサパサして {唾液|だえき}を {吸|す}い、{口|くち}や のどに はりつきやすい {食|た}べ{物|もの}です。おもちや のりも {注意|ちゅうい}が {必要|ひつよう}です。'},
+ {cat:'食べかたの くふう',
+  q:'{飲|の}み{込|こ}む {力|ちから}が {弱|よわ}い {人|ひと}が むせやすいのは?',
+  c:['{水|みず}','ゼリー','ポタージュ'],
+  e:'{水|みず}や お{茶|ちゃ}は さらさらして {流|なが}れが {速|はや}く、のどの {準備|じゅんび}が {間|ま}に{合|あ}わずに {気管|きかん}へ {入|はい}りやすいのです。'},
+ {cat:'食べかたの くふう',
+  q:'{飲|の}み{物|もの}に「とろみ」を つける {理由|りゆう}は?',
+  c:['ゆっくり {流|なが}れるようにする','{味|あじ}を わかりやすくする','{栄養|えいよう}を とりやすくする'],
+  e:'とろみを つけると のどを ゆっくり {流|なが}れ、むせにくくなります。{合|あ}う {濃|こ}さは {人|ひと}によって ちがうので、{専門家|せんもんか}に {相談|そうだん}しましょう。'},
+ {cat:'食べかたの くふう',
+  q:'{食|た}べるときの {良|よ}い {姿勢|しせい}は?',
+  c:['あごを {軽|かる}く {引|ひ}く','あごを {上|うえ}に あげる','{体|からだ}を {後|うし}ろに そらす'],
+  e:'いすに {深|ふか}く すわって {足|あし}を {床|ゆか}に つけ、あごを {軽|かる}く {引|ひ}くと、{安全|あんぜん}に {飲|の}み{込|こ}みやすくなります。'},
+ {cat:'食べかたの くふう',
+  q:'{上|うえ}を {向|む}いたまま {飲|の}み{込|こ}むと どうなる?',
+  c:['{気管|きかん}に {入|はい}りやすい','{食道|しょくどう}に {入|はい}りやすい','{胃|い}に {早|はや}く とどく'],
+  e:'{上|うえ}を {向|む}くと {気管|きかん}の {入口|いりぐち}が {開|ひら}きやすくなり、{食|た}べ{物|もの}が {入|はい}りやすくなります。{少|すこ}し {下|した}を {向|む}いて {飲|の}み{込|こ}みましょう。'},
+
+ {cat:'げんきな ごっくんのために',
+  q:'{口|くち}や {舌|した}の {体操|たいそう}で よく {使|つか}う {言葉|ことば}は?',
+  c:['パ・タ・カ・ラ','サ・シ・ス・セ','マ・ミ・ム・メ'],
+  e:'「パ」は くちびる、「タ」は {舌|した}の {先|さき}、「カ」は {舌|した}の {奥|おく}、「ラ」は {舌|した}を {丸|まる}める {動|うご}きの {練習|れんしゅう}に なります。{食事|しょくじ}の {前|まえ}に おすすめです。'},
+ {cat:'げんきな ごっくんのために',
+  q:'{飲|の}み{込|こ}みの リハビリの {専門家|せんもんか}は?',
+  c:['{言語聴覚士|げんごちょうかくし}','{理学療法士|りがくりょうほうし}','{診療放射線技師|しんりょうほうしゃせんぎし}'],
+  e:'{言語聴覚士|げんごちょうかくし}(ST)は「{話|はな}す・{聞|き}く・{食|た}べる」の リハビリの {専門家|せんもんか}です。{気|き}になることは お{気軽|きがる}に ご{相談|そうだん}ください。'}
+];
+
+const RANKS=[
+ {min:18,rank:'🏆 ごっくん{博士|はかせ}',msg:'すばらしい! {飲|の}み{込|こ}みのことを とても よく {知|し}っていますね。'},
+ {min:13,rank:'🥇 ごっくん{名人|めいじん}',msg:'よく できました! あと{少|すこ}しで {博士|はかせ}です。'},
+ {min:7,rank:'🔍 ごっくん{探検隊|たんけんたい}',msg:'いい {調子|ちょうし}です! {解説|かいせつ}を {読|よ}んで もっと くわしくなりましょう。'},
+ {min:0,rank:'🌱 ごっくん {1年生|いちねんせい}',msg:'{今日|きょう} たくさん {新|あたら}しいことを {知|し}りましたね!'}
+];
+
+const $=id=>document.getElementById(id);
+const ruby=s=>s.replace(/\{([^|}]+)\|([^}]+)\}/g,'<ruby>$1<rt>$2</rt></ruby>');
+const shuffle=a=>{for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a};
+
+let idx=0,score=0,missed=[];
+
+document.querySelectorAll('[data-r]').forEach(el=>{el.innerHTML=ruby(el.dataset.r)});
+
+function show(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.toggle('show',s.id===id));
+  window.scrollTo(0,0);
+}
+
+function startQuiz(){
+  idx=0;score=0;missed=[];
+  show('quiz');
+  renderQuestion();
+}
+
+function renderQuestion(){
+  const item=QUESTIONS[idx];
+  $('count').textContent=`${idx+1} / ${QUESTIONS.length}`;
+  $('fill').style.width=`${idx/QUESTIONS.length*100}%`;
+  $('score').textContent=`⭕ ${score}`;
+  $('cat').textContent=item.cat;
+  $('qtext').innerHTML=`Q${idx+1}. ${ruby(item.q)}`;
+  $('fb').classList.remove('show');
+  const box=$('choices');
+  box.innerHTML='';
+  // 選択肢の先頭(c[0])が正解。表示順は毎回まぜる
+  shuffle(item.c.map((text,i)=>({text,ok:i===0}))).forEach((ch,i)=>{
+    const b=document.createElement('button');
+    b.className='choice';
+    b.dataset.ok=ch.ok?'1':'';
+    b.innerHTML=`<span class="tag">${'ABC'[i]}</span><span>${ruby(ch.text)}</span>`;
+    b.addEventListener('click',()=>answer(b));
+    box.appendChild(b);
+  });
+  window.scrollTo(0,0);
+}
+
+function answer(btn){
+  const item=QUESTIONS[idx];
+  const ok=!!btn.dataset.ok;
+  document.querySelectorAll('.choice').forEach(b=>{
+    b.disabled=true;
+    if(b.dataset.ok){b.classList.add('correct');b.querySelector('.tag').textContent='◯'}
+  });
+  if(ok){score++}
+  else{
+    btn.classList.add('wrong');
+    btn.querySelector('.tag').textContent='✕';
+    missed.push(idx);
+  }
+  $('score').textContent=`⭕ ${score}`;
+  $('fill').style.width=`${(idx+1)/QUESTIONS.length*100}%`;
+  const j=$('judge');
+  j.className=ok?'ok':'ng';
+  j.innerHTML=ok?ruby('⭕ せいかい!'):ruby('✕ ざんねん… {正解|せいかい}は「')+ruby(item.c[0])+'」';
+  $('explain').innerHTML=ruby(item.e);
+  $('btnNext').innerHTML=idx+1<QUESTIONS.length?ruby('つぎの {問題|もんだい}へ'):ruby('けっかを {見|み}る');
+  $('fb').classList.add('show');
+  $('fb').scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+
+function next(){
+  idx++;
+  if(idx<QUESTIONS.length)renderQuestion();
+  else showResult();
+}
+
+function showResult(){
+  const r=RANKS.find(x=>score>=x.min);
+  $('points').innerHTML=`${score}<small> / ${QUESTIONS.length} ${ruby('{問|もん}')}</small>`;
+  $('rank').innerHTML=ruby(r.rank);
+  $('msg').innerHTML=ruby(r.msg);
+  $('review').innerHTML=missed.length
+    ?`<h3>${ruby('📖 もういちど {確認|かくにん}しよう')}</h3><ul>`+missed.map(i=>`<li>${ruby(QUESTIONS[i].q)}<br><span class="ans">→ ${ruby(QUESTIONS[i].c[0])}</span></li>`).join('')+'</ul>'
+    :`<h3>${ruby('🎉 {全問|ぜんもん} {正解|せいかい}です!')}</h3>`;
+  show('result');
+}
+
+$('btnStart').addEventListener('click',startQuiz);
+$('btnRetry').addEventListener('click',startQuiz);
+$('btnNext').addEventListener('click',next);
+$('btnRuby').addEventListener('click',()=>{
+  const off=document.body.classList.toggle('no-ruby');
+  $('btnRuby').textContent=off?'ふりがな:なし':'ふりがな:あり';
+});
+</script>
+</body>
+</html>
